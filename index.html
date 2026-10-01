@@ -457,6 +457,27 @@ function makeStudent(o){
   g.scale.setScalar(o.scale);scene.add(g);
   return {g,inner,up,legs,arms,head,toast,home,stars};
 }
+function makeSkyStar(){
+  const g=new THREE.Group();
+  const t=canvasTex(64,64,(c)=>{
+    const gr=c.createRadialGradient(32,32,2,32,32,30);
+    gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.18,'rgba(255,236,140,1)');gr.addColorStop(1,'rgba(255,210,63,0)');
+    c.fillStyle=gr;c.beginPath();c.arc(32,32,30,0,Math.PI*2);c.fill();
+    c.fillStyle='#fff6c4';c.beginPath();
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2-Math.PI/2,r=i%2?8:28;i?c.lineTo(32+Math.cos(a)*r,32+Math.sin(a)*r):c.moveTo(32+Math.cos(a)*r,32+Math.sin(a)*r);}
+    c.closePath();c.fill();
+  });
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  sp.scale.set(2.6,2.6,1);g.add(sp);
+  const geo=new THREE.BufferGeometry(),arr=new Float32Array(36);
+  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=.45+i%3*.35;arr[i*3]=Math.cos(a)*r;arr[i*3+1]=(i%2?-.2:.35);arr[i*3+2]=Math.sin(a)*r;}
+  geo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+  g.add(new THREE.Points(geo,new THREE.PointsMaterial({size:.22,map:t,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:0xfff3a8})));
+  g.visible=false;return g;
+}
+const skyStar=makeSkyStar();
+function attachSkyStar(c){if(skyStar.parent)skyStar.parent.remove(skyStar);c.g.add(skyStar);skyStar.position.set(0,0.9,0);skyStar.visible=false;c.inner.visible=true;}
+function twinkleStar(){if(!skyStar.visible)return;const s=1.45+Math.sin(S.real*9)*0.28;skyStar.scale.setScalar(s);skyStar.rotation.z=S.real*1.8;}
 function pose(c,ph,amp,sit,lean,lie){
   const lr=Math.sin(ph)*amp;
   c.legs[0].rotation.x=lerp(lr,-1.45,sit);c.legs[1].rotation.x=lerp(-lr,-1.45,sit);
@@ -468,7 +489,7 @@ function wrapAng(r){return((r+Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2)-Math.P
 
 // ---------- rivals
 const TYPES=[
-  {day:'月曜日',name:'小柄な1年生',scale:0.86,dens:1.0,sp:[4.6,5.4],blazer:0x2b3a67,skirt:0x3d4d7c,hair:0x6a4428,ribbon:0xe8435a,style:'twin',tip:'体格が小さいから軽い。勢いつけすぎると吹っ飛ぶよ。'},
+  {day:'月曜日',name:'小柄な1年生',scale:0.86,dens:1.0,sp:[4.6,5.4],blazer:0x2b3a67,skirt:0x3d4d7c,hair:0x6a4428,ribbon:0xe8435a,style:'twin',tip:'体格が小さいから軽い。ダッシュしすぎると空まで飛んで星になるよ。'},
   {day:'火曜日',name:'図書委員',scale:0.95,dens:1.0,sp:[3.0,3.6],blazer:0x3a2f4a,skirt:0x514463,hair:0x1c1c22,ribbon:0x2f8f83,style:'long',tip:'のんびり登校。先に角に着いちゃっても止まって待つのはナシ。'},
   {day:'水曜日',name:'陸上部エース',scale:1.0,dens:1.05,sp:[7.0,8.0],blazer:0x1f4e5f,skirt:0x2d6275,hair:0x2a1e18,ribbon:0xffb703,style:'pony',tip:'とにかく速い！ミラーに映ったらすぐ角に着くよ。'},
   {day:'木曜日',name:'バレー部キャプテン',scale:1.16,dens:1.1,sp:[5.0,5.8],blazer:0x5a2d3c,skirt:0x6e3a4b,hair:0x3b2a20,ribbon:0xf4f1de,style:'short',tip:'背が高くて重め。ちょい強めに当たってもOK。'},
@@ -493,7 +514,7 @@ const post={x:0,z:-18,r:0.33,h:1.5,name:'ポスト',mesh:makePost(),active:true,
 const extraPole=pole(2.3,-20,true);
 
 // ---------- state
-const S={state:'title',day:0,scores:[],t:0,simT:0,real:0,timeScale:1,afterT:0,afterDur:2.6,impact:false,shake:0,orbit:0,camYaw:0,camAng:0,contact:V(0,0,0),res:null,bubble:'',b2:null,arrive:7,sound:true,scored:false,rt:0,ri:0,shot:-1};
+const S={state:'title',day:0,scores:[],t:0,simT:0,real:0,timeScale:1,afterT:0,afterDur:2.6,impact:false,shake:0,orbit:0,camYaw:0,camAng:0,contact:V(0,0,0),res:null,bubble:'',b2:null,arrive:7,sound:true,scored:false,rt:0,ri:0,shot:-1,starOn:false};
 try{const sv=localStorage.getItem('tg.301.sound');if(sv!==null)S.sound=sv!=='0';}catch(e){}
 document.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
 document.addEventListener('selectstart',e=>e.preventDefault());
@@ -532,13 +553,13 @@ function riderPose(c,ph){c.legs[0].rotation.x=-1.25+Math.sin(ph)*0.45;c.legs[1].
 function decoyRoot(){return decoy.bike?decoy.bike.g:decoy.char.g;}
 function decoyHead(){return decoy.bike?decoy.bike.rider.head:decoy.char.head;}
 
-function resetChar(o){o.yawSpin=0;o.yawAcc=0;o.yawType=false;o.char.g.rotation.set(0,0,0);o.sit=0;o.vel.set(0,0,0);o.landed=false;o.char.stars.visible=false;pose(o.char,0,0,0,0);}
+function resetChar(o){o.yawSpin=0;o.yawAcc=0;o.yawType=false;o.star=false;o.char.g.rotation.set(0,0,0);o.sit=0;o.vel.set(0,0,0);o.landed=false;o.char.stars.visible=false;if(o.char.inner)o.char.inner.visible=true;pose(o.char,0,0,0,0);}
 function setupRound(){
   const ty=TYPES[S.day];girl.type=ty;
-  if(girl.char)scene.remove(girl.char.g);
-  girl.char=makeStudent(Object.assign({girl:true},ty));girl.scale=ty.scale;
+  if(girl.char){if(skyStar.parent)skyStar.parent.remove(skyStar);scene.remove(girl.char.g);}
+  girl.char=makeStudent(Object.assign({girl:true},ty));girl.scale=ty.scale;attachSkyStar(girl.char);
   girl.speed=rand(ty.sp[0],ty.sp[1]);
-  S.arrive=rand(5.6,8.6);
+  S.arrive=rand(5.6,8.6);S.starOn=false;
   girl.pos.set(girl.speed*S.arrive,0,rand(-1.2,1.2));girl.fly=false;girl.phase=0;
   resetChar(girl);girl.char.g.rotation.y=-Math.PI/2;girl.char.g.position.copy(girl.pos);
   player.pos.set(rand(-0.8,0.8),0,-32);player.yaw=0;player.speed=3;player.phase=0;resetChar(player);
@@ -566,7 +587,7 @@ function setupRound(){
   S.camYaw=0;S.t=0;S.simT=0;S.bubble='';S.b2=null;S.impact=false;S.scored=false;
   // recorder
   const n=[],add=c=>n.push(c.g,c.inner,c.up,c.legs[0],c.legs[1],c.arms[0],c.arms[1],c.stars);
-  add(player.char);add(girl.char);n.push(girl.char.toast);
+  add(player.char);add(girl.char);n.push(girl.char.toast,skyStar);
   REC.toasts=[{node:girl.char.toast,home:girl.char.home}];
   if(decoy.active){if(decoy.bike){n.push(decoy.bike.g,decoy.bike.wheels[0],decoy.bike.wheels[1]);add(decoy.bike.rider);}else{add(decoy.char);n.push(decoy.char.toast);REC.toasts.push({node:decoy.char.toast,home:decoy.char.home});}}
   obstacles.forEach(o=>n.push(o.mesh));
@@ -586,6 +607,7 @@ function noise(d,vol,delay,freq){const a=ac();if(!a||!S.sound)return;const t=a.c
 function chime(){[659,523,587,392,392,587,659,523].forEach((f,i)=>tone(f,0.5,'sine',0.09,i*0.32));}
 function bell(){[0,0.16,0.42,0.58].forEach(d=>tone(2350,0.14,'sine',0.07,d));}
 function gon(){tone(92,0.35,'sine',0.45,0,0.5);noise(0.15,0.4,0,420);S.shake=Math.max(S.shake,0.25);}
+function sfxStar(){[1568,2093,2637,3136].forEach((f,i)=>tone(f,0.32,'sine',0.07,i*0.07));tone(784,1.1,'triangle',0.05,0.12,2);}
 function sfxImpact(kind){noise(0.25,0.55,0,700);tone(130,0.4,'sine',0.5,0,0.4);
   if(kind==='fly'){tone(260,0.9,'triangle',0.14,0.05,5);noise(0.6,0.25,0.1,2500);}
   if(kind==='great'){tone(880,0.12,'square',0.05,0.3);tone(1320,0.18,'square',0.05,0.42);}
@@ -608,7 +630,7 @@ function toTitle(){S.state='title';S.day=0;S.scores=[];setupRound();panel(
   '<p class="sub">青春ドラマの登校シーンを撮影中。曲がり角で、ちょうどいい勢いでぶつかろう。</p>'+
   '<ul class="how"><li><b>ダッシュ</b>で加速、離すと歩きに戻る。<b>ブレーキ</b>で減速。<b>◀ ▶</b>で角度調整。</li>'+
   '<li>角の向こうは見えない。<b>カーブミラー</b>で相手の接近を確認。真横から直角に当たるのが理想。</li>'+
-  '<li>勢いが強すぎると相手は<b>かなり遠くまで吹っ飛ぶ</b>。体格とスピードは毎日ちがう。</li>'+
+  '<li>勢いが強すぎると相手は<b>空まで吹っ飛んで星になる</b>。体格とスピードは毎日ちがう。</li>'+
   '<li>道には<b>電柱・ポスト・自販機</b>。スピードを出したままぶつかると激突。</li>'+
   '<li>たまに<b>自転車や男子学生</b>も来る。見極めてスルーしよう。</li>'+
   '<li>撮影後は<b>監督・助監督・アシスタント</b>がリプレイを見て採点。</li>'+
@@ -625,7 +647,7 @@ function titleOf(r){
   switch(r.kind){
     case 'great':return['ナイス出会い頭！','お互いケガなし。'+(T.caught?'パンも空中キャッチで無事。':'')];
     case 'strong':return['ちょい強め！','パンが落ちちゃった。もう少しスピードを落とそう。'];
-    case 'fly':return[r.glance?'横回転で吹っ飛ばし！！':r.dist>15?'場外まで吹っ飛ばし！！':'吹っ飛ばしすぎ！！','飛距離 '+r.dist.toFixed(1)+'m。相手の体格に合わせてスピードを調整して。'];
+    case 'fly':return[r.star?'お空の星に！！':r.glance?'横回転で吹っ飛ばし！！':r.dist>15?'場外まで吹っ飛ばし！！':'吹っ飛ばしすぎ！！',r.star?'勢いが強すぎて、相手は空の星になりました。':'飛距離 '+r.dist.toFixed(1)+'m。相手の体格に合わせてスピードを調整して。'];
     case 'weak':return['ちょん…','かすった程度。もう少し勢いがほしい。'];
     case 'ambush':return['待ち伏せは反則！','止まって待つのはナシ。走りながらタイミングを合わせよう。'];
     case 'miss':return['すれ違い…','タイミングがズレた。カーブミラーで相手を確認しよう。'];
@@ -639,38 +661,59 @@ const MUR={
   '助監督':['現在、押し5分です。','近隣への挨拶、済んでます。','スタンバイ、OKです。','パン、温度42度です。','本番、回ってます。','道路使用許可、10時までです。','ミラー、角度確認済みです。','主演、心拍やや高めです。','天気、あと30分もちます。','カチンコ、予備あります。','桜、散る量は自然です。','通行人、止めてます。','許可は通学路のみです。','テイク数、記録してます。','昼休憩は12時半です。','音声、良好です。','ストップウォッチ、回してます。','主演の靴ひも、確認済み。','予算、残り3割です。','次の現場、隣の角です。'],
   'アシスタント':['パン、焼き上がりました。','お茶、置いておきますね。','ジャム派の方もいます。','パンくず、掃除しておきます。','カイロ、配ってきます。','マーガリン、切れそうです。','食パン、6枚切りです。','近所の犬が吠えてます。','トースター、2台あります。','日焼け止め、ありますよ。','パンの耳、取っておきます。','救急箱、スタンバイです。','……いい匂いがします。','花びら、払っておきます。','ばんそうこう、補充しました。','お弁当、唐揚げです。','パン屋さん、追加OKです。','ポストに投函してきました。','近所の方が見学中です。','……パン、足りるかな。']
 };
+const CRASH={
+  'ポスト':{ad:['ポストは、最初からそこにあります。','投函は、撮影後でお願いします。'],as:['郵便局に、菓子折りを。','中の手紙、確認します。'],wob:'ポスト、傾いてます。',rec:'ポスト、破損なしです。',bye:'中の手紙、無事です……'},
+  '電柱':{ad:['電柱は、動きません。','電柱は、据え付けです。'],as:['電力会社に、菓子折りを。','電線、確認します。'],wob:'電柱、揺れてます。',rec:'電柱、破損なしです。',bye:'電線、無事です……'},
+  '自販機':{ad:['自販機は、歩いてきてません。','自販機は、据え置きです。'],as:['業者さんに、菓子折りを。','缶、出てないか見ます。'],wob:'自販機、缶が鳴ってます。',rec:'自販機、破損なしです。',bye:'中の缶、無事です……'},
+  '標識':{ad:['標識は、据え付けです。','標識は、動きません。'],as:['道路課に、菓子折りを。','標識、曲がってないか見ます。'],wob:'標識、傾いてます。',rec:'標識、破損なしです。',bye:'標識、曲がってないです……'},
+  'カーブミラー':{ad:['ミラーは、映す役です。','ミラーは、据え付けです。'],as:['ミラー、拭いておきます。','ミラー、歪み確認します。'],wob:'ミラー、まだ揺れてます。',rec:'ミラー、破損なしです。',bye:'ミラー、歪んでないです……'}
+};
+function crashOf(obj){
+  const d=CRASH[obj]||{};
+  return {
+    dir:d.dir||[obj+'にセリフはない。','いい顔だ。相手が'+obj+'でなければ。'],
+    ad:d.ad||[obj+'は、最初からそこにあります。'],
+    as:d.as||[obj+'の管理者に、菓子折りを。'],
+    fore:d.fore||('前方、'+obj+'です。'),
+    hit:d.hit||('……'+obj+'か。'),
+    wob:d.wob||(obj+'、揺れてます。'),
+    cut:d.cut||('カット。'+obj+'に罪はない。'),
+    rec:d.rec||(obj+'、破損なしです。'),
+    bye:d.bye||(obj+'、ご迷惑をおかけしました……')
+  };
+}
 function judgeAll(r){
   if(r._J)return r._J;
-  const kmh=r.kmh||0,ang=Math.round(r.ang||0),dist=(r.dist||0).toFixed(1),tn=turns(),obj=r.obj||'',kb=(r.kb||0).toFixed(1),left=Math.max(0,4-S.day);
+  const kmh=r.kmh||0,ang=Math.round(r.ang||0),dist=(r.dist||0).toFixed(1),tn=turns(),obj=r.obj||'',kb=(r.kb||0).toFixed(1),left=Math.max(0,4-S.day),cv=crashOf(obj);
   let d1,d2,d3;
   switch(r.kind){
     case 'great':{const s=clamp(Math.round(7+r.angS/35*2+r.posS/25),7,10);
       d1=[s,s>=9?pick(['……完璧だ。今日は帰っていい。','この角を、20年探していた。','朝が、今完成した。']):pick(['悪くない。迷いが少し映った。','惜しい。出会い頭は、角だ。'])];break;}
     case 'strong':d1=[5,pick(['強い。余白が足りない。','パンが落ちた。朝が終わった。'])];break;
-    case 'fly':d1=[r.dist>15?1:3,r.glance?'美しい。だがフィギュアではない。':r.dist>15?'いつからアクション映画に？':'私のフレームから出ていった。'];break;
+    case 'fly':d1=[r.star?0:r.dist>15?1:3,r.star?'……星だ。夜まで待て。':r.glance?'美しい。だがフィギュアではない。':r.dist>15?'いつからアクション映画に？':'私のフレームから出ていった。'];break;
     case 'weak':d1=[3,pick(['今のは、濃いめのすれ違いだ。','私も気づかなかった。'])];break;
     case 'ambush':d1=[1,'待った瞬間、出会いではない。'];break;
     case 'miss':d1=[0,pick(['それも人生だ。映画ではない。','君は今、ただ登校した人だ。'])];break;
-    case 'crash':d1=[1,pick([obj+'にセリフはない。','いい顔だ。相手が'+obj+'でなければ。'])];break;
+    case 'crash':d1=[1,pick(cv.dir)];break;
     default:d1=[1,r.who==='bike'?'自転車とは、物語は始まらない。':'エキストラと出会うな。'];
   }
   if(['great','strong','fly','weak'].includes(r.kind)){
-    const c={great:pick(['角度'+ang+'度。2分巻きです。','OKテイク、押さえました。']),strong:'やや強め。保険の範囲内です。',
-      fly:r.glance?tn+'回転。予算外です。':r.dist>15?dist+'m。許可エリア外です。':'台本に「飛ぶ」はありません。',
+    const c={great:pick(['角度'+ang+'度。2分、回しました。','OKテイク、押さえました。']),strong:'やや強め。保険の範囲内です。',
+      fly:r.star?'高度、許可エリア外です。':r.glance?tn+'回転。予算外です。':r.dist>15?dist+'m。許可エリア外です。':'台本に「飛ぶ」はありません。',
       weak:'衝撃'+kb+'。会釈の数値です。'}[r.kind];
     d2=[clamp(Math.round(10*(r.angS/35*0.5+r.pow/40*0.5)),0,10),c];
   }else if(r.kind==='ambush')d2=[1,'書類上は「待ち合わせ」です。'];
   else if(r.kind==='miss')d2=[2,'15分、押します。'];
-  else if(r.kind==='crash')d2=[2,obj+'は、先にいました。'];
+  else if(r.kind==='crash')d2=[2,pick(cv.ad)];
   else d2=[1,r.who==='bike'?'一般の方です。謝ってきます。':'隣の現場の方です。'];
   switch(r.kind){
-    case 'great':d3=T.caught?[10,'パン、本人の口に戻りました。']:[8,'お二人とも、ケガなしです。'];break;
+    case 'great':d3=T.caught?[10,'パン、口に戻りました。']:[8,'お二人とも、ケガなしです。'];break;
     case 'strong':d3=[6,'予備のパン、あと'+left+'枚です。'];break;
-    case 'fly':d3=[1,r.glance?'冷たいお茶、用意しました。':'救護班、向かってます。'];break;
+    case 'fly':d3=[1,r.star?'望遠鏡、あります。':r.glance?'冷たいお茶、用意しました。':'救護班、向かってます。'];break;
     case 'weak':d3=[5,'歯形、きれいに残ってます。'];break;
     case 'ambush':d3=[3,'パン、冷めちゃいました。'];break;
     case 'miss':d3=[4,'レンジは機材車にあります。'];break;
-    case 'crash':d3=[3,obj+'に、菓子折りを。'];break;
+    case 'crash':d3=[3,pick(cv.as)];break;
     default:d3=r.who==='bike'?[2,'卵、9個は無事でした。']:[3,'パンが2枚に。経費で落とします。'];
   }
   if(r.decoy&&['great','strong','weak'].includes(r.kind))d3=[Math.min(10,d3[0]+1),d3[1]];
@@ -771,8 +814,9 @@ function impact(dx,dz){
   const posS=25*Math.max(0,1-Math.max(0,d-1.5)/5);
   const pow={great:clamp(40-8*Math.abs(kb-3.4)/1.4,32,40),strong:24,weak:14,fly:0,ambush:0}[kind];
   const score=kind==='fly'?Math.min(20,(angS+posS)*0.3):kind==='ambush'?posS*0.4:pow+angS+posS;
-  girl.fly=kind==='fly';girl.landed=false;
-  if(girl.fly){girl.vel.copy(n).multiplyScalar(kb*2.5).add(vP.clone().multiplyScalar(0.35));girl.vel.y=5+kb*0.9;}
+  const star=kind==='fly'&&kb>=8;
+  girl.fly=kind==='fly';girl.landed=false;girl.star=star;
+  if(girl.fly){girl.vel.copy(n).multiplyScalar(star?kb*0.85:kb*2.5).add(vP.clone().multiplyScalar(star?0.12:0.35));girl.vel.y=star?12+kb*0.5:5+kb*0.9;}
   else{girl.vel.copy(n).multiplyScalar(kb*0.55).add(vG.clone().multiplyScalar(0.12));girl.vel.y=1.4;}
   girl.spin.set(rand(-10,10),rand(-5,5),rand(-10,10));
   const cy=n.z*vP.x-n.x*vP.z,sg=cy>=0?1:-1,glance=kind!=='ambush'&&kind!=='weak'&&Math.abs(ang-90)>22;
@@ -787,7 +831,7 @@ function impact(dx,dz){
   }
   S.bubble={great:'いたた…ごめんね！',strong:'あっ、パンが…！',fly:'きゃ〜〜っ!?',weak:'…ん？',ambush:'なんで止まってたの！？'}[kind];
   S.impact=true;S.b2=null;
-  beginEvent({kind,score:Math.round(score),kb,ang,d,pow,angS,posS,kmh:Math.round(player.speed*3.6),dist:0,hitObj:null,glance,decoy:decoy.active?decoy.who:null},contact,girl.fly?3.4:2.7);
+  beginEvent({kind,score:Math.round(score),kb,ang,d,pow,angS,posS,kmh:Math.round(player.speed*3.6),dist:0,hitObj:null,glance,decoy:decoy.active?decoy.who:null,star},contact,star?5.2:girl.fly?3.4:2.7);
   bang(kind==='fly'?'ドカーン!!':kind==='weak'||kind==='ambush'?'ぽすっ':'ドンッ!!');
   if(kind!=='weak'&&kind!=='ambush')flash();
   S.shake=kind==='fly'?0.5:kind==='strong'?0.3:0.18;sfxImpact(kind);
@@ -821,13 +865,24 @@ function envCollide(o,prev,rad,hs){
 }
 function physChar(o,dt,fly,rad){
   const prev=o.pos.clone();
-  o.pos.addScaledVector(o.vel,dt);o.vel.y-=16*dt;
-  if(o.pos.y<=0){o.pos.y=0;if(o.vel.y<-3.5){o.vel.y*=fly?-0.38:-0.28;if(fly)noise(0.12,0.25,0,500);}else o.vel.y=0;}
+  o.pos.addScaledVector(o.vel,dt);o.vel.y-=(o.star?5.2:16)*dt;
+  if(!o.star){if(o.pos.y<=0){o.pos.y=0;if(o.vel.y<-3.5){o.vel.y*=fly?-0.38:-0.28;if(fly)noise(0.12,0.25,0,500);}else o.vel.y=0;}}
+  else if(o.pos.y<0.2)o.pos.y=0.2;
   const hs=Math.hypot(o.vel.x,o.vel.z);
-  if(o.pos.y===0){const f=Math.exp(-(fly?1.3:5)*dt);o.vel.x*=f;o.vel.z*=f;}
-  const hit=envCollide(o,prev,rad,hs);
+  if(!o.star&&o.pos.y===0){const f=Math.exp(-(fly?1.3:5)*dt);o.vel.x*=f;o.vel.z*=f;}
+  if(o.star&&S.starOn){o.vel.x*=Math.exp(-1.5*dt);o.vel.z*=Math.exp(-1.5*dt);if(o.vel.y<0.2)o.vel.y=0.28;}
+  const hit=(o.star&&o.pos.y>4)?null:envCollide(o,prev,rad,hs);
   if(hit&&o===girl&&fly&&S.res&&!S.res.hitObj){S.res.hitObj=hit;S.bubble='め、目が回る〜';}
   const g=o.char.g;
+  if(o.star&&o===girl&&!S.starOn&&o.pos.y>=9.2){
+    S.starOn=true;o.char.inner.visible=false;skyStar.visible=true;
+    bang('きらーん');sfxStar();S.bubble='星になっちゃった…';
+    o.vel.set(o.vel.x*0.15,0.4,o.vel.z*0.15);g.rotation.set(0,g.rotation.y,0);
+  }
+  if(o.star){
+    if(!S.starOn){g.rotation.x+=o.spin.x*dt;g.rotation.z+=o.spin.z*dt;g.rotation.y+=o.spin.y*dt;}
+    pose(o.char,o.phase,0,0,0,true);g.position.copy(o.pos);return;
+  }
   if(fly&&!o.landed&&o.pos.y>0.05){g.rotation.x+=o.spin.x*dt;g.rotation.z+=o.spin.z*dt;g.rotation.y+=o.spin.y*dt;}
   else{if(fly)o.landed=true;
     if(fly&&hs>4.5&&o.pos.y<0.1&&!o.yawType)g.rotation.x+=hs*dt*1.1;
@@ -879,7 +934,7 @@ function updateReplay(rdt){
   let pos,look;
   if(shot===0){look=P.clone().lerp(sub,0.5);look.y=0.9;pos=c.clone().add(V(-2.8,4.4,3.0));}
   else if(shot===1){const a=Math.PI*0.75+rel*0.55;pos=fixCam(V(c.x+Math.cos(a)*3.3,0.85,c.z+Math.sin(a)*3.3));look=V(c.x,0.8,c.z);}
-  else{look=sub.clone();look.y=0.7;const far=S.res.kind==='fly';const a=Math.PI*0.75+rel*0.25;pos=fixCam(V(look.x+Math.cos(a)*(far?6:4.8),far?3.2:2.2,look.z+Math.sin(a)*(far?6:4.8)));}
+  else{look=sub.clone();look.y=(S.res.star&&sub.y>1)?sub.y:0.7;const far=S.res.kind==='fly';const a=Math.PI*0.75+rel*0.25;pos=fixCam(V(look.x+Math.cos(a)*(far?6:4.8),S.res.star?Math.max(4.2,sub.y-2):far?3.2:2.2,look.z+Math.sin(a)*(far?6:4.8)));}
   if(shot!==S.shot){S.shot=shot;camPos.copy(pos);camLook.copy(look);}
   else{const k=1-Math.exp(-6*rdt);camPos.lerp(pos,k);camLook.lerp(look,k);}
   camera.position.copy(camPos);camera.lookAt(camLook);
@@ -902,8 +957,8 @@ function afterCenter(){if(S.res&&S.res.kind==='fly')return girl.char.g.position;
 function updateCamera(rdt){
   let rate=8;
   if(S.state==='title'){S.orbit+=rdt*0.12;tgtPos.set(Math.cos(S.orbit)*15,6.5,Math.sin(S.orbit)*15);tgtLook.set(0,1.2,0);rate=2;}
-  else if(S.impact&&(S.state==='after'||S.state==='result'||S.state==='final')){S.camAng+=rdt*0.3;const c=afterCenter(),far=S.res.kind==='fly';
-    tgtPos.set(c.x+Math.cos(S.camAng)*(far?7.5:5.5),far?3.6:2.7,c.z+Math.sin(S.camAng)*(far?7.5:5.5));tgtLook.set(c.x,0.7,c.z);rate=far?4:3;}
+  else if(S.impact&&(S.state==='after'||S.state==='result'||S.state==='final')){S.camAng+=rdt*0.3;const c=afterCenter(),star=S.res&&S.res.star,far=S.res.kind==='fly';
+    tgtPos.set(c.x+Math.cos(S.camAng)*(star?9:far?7.5:5.5),star?Math.max(4.8,c.y-1.8):far?3.6:2.7,c.z+Math.sin(S.camAng)*(star?9:far?7.5:5.5));tgtLook.set(c.x,star?c.y:0.7,c.z);rate=star?3:far?4:3;}
   else{const p=player.pos;S.camYaw=lerp(S.camYaw,player.yaw,1-Math.exp(-4*rdt));const cy=S.camYaw;
     tgtPos.set(p.x-Math.sin(cy)*5.2,2.5,p.z-Math.cos(cy)*5.2);if(!inRoad(tgtPos.x,tgtPos.z,3.0))tgtPos.x=clamp(tgtPos.x,-3,3);
     tgtLook.set(p.x+Math.sin(cy)*6,1.2,p.z+Math.cos(cy)*6);if(S.state==='intro')rate=20;}
@@ -965,6 +1020,7 @@ function frame(now){
   if(S.state==='play'||S.state==='after'||S.state==='intro'){
     mirrorFace.visible=false;renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);mirrorFace.visible=true;
   }
+  twinkleStar();
   renderer.render(scene,camera);
 }
 // ---------- music
@@ -1009,7 +1065,7 @@ function beginCine(state,cine){S.state=state;S.cine=cine;S.cineT=0;S.cineAct=und
 function startOpening(){S.day=0;S.scores=[];S.seen={};S.freezeCam=false;setSunset(0);clearCast();setupRound();beginCine('opening',{keys:OPEN_KEYS,text:OPEN_TEXT,end:20.5});startMusic('open');}
 function startEnding(){
   const total=S.scores.reduce((a,b)=>a+b.score,0),avg=total/Math.max(1,S.scores.length);
-  scene.remove(girl.char.g);if(girl.char.toast.parent===scene)scene.remove(girl.char.toast);
+  scene.remove(girl.char.g);if(skyStar.parent)skyStar.parent.remove(skyStar);if(girl.char.toast.parent===scene)scene.remove(girl.char.toast);
   if(decoy.char)scene.remove(decoy.char.g);if(decoy.bike)scene.remove(decoy.bike.g);decoy.active=false;
   resetChar(player);player.char.g.rotation.set(0,0,0);
   clearCast();
@@ -1052,18 +1108,18 @@ $('cskip').addEventListener('click',()=>{if(S.state==='opening'||S.state==='endi
 // ---------- replay commentary
 const AVS={'監督':'🎬','助監督':'📋','アシスタント':'🎧'};
 function buildSay(r){
-  const k=r.kind,kmh=r.kmh||Math.round(player.speed*3.6),obj=r.obj||'',L=[];
+  const k=r.kind,kmh=r.kmh||Math.round(player.speed*3.6),obj=r.obj||'',cv=crashOf(obj),L=[];
   L.push({rel:-3.1,w:'監督',s:(r.decoy||k==='wrong')&&Math.random()<0.5?'……台本にない足音だ。':pick(MUR['監督'])});
   L.push({rel:-2.3,w:'アシスタント',s:pick(MUR['アシスタント'])});
   L.push({rel:-1.7,w:'助監督',s:pick(MUR['助監督'])});
-  L.push({rel:-0.75,w:'助監督',s:{great:'時速'+kmh+'km。想定どおり。',strong:'時速'+kmh+'km。やや速い。',fly:'時速'+kmh+'km。記録的です。',weak:'時速'+kmh+'km。散歩です。',ambush:'主演、停止中です。',crash:'前方に'+obj+'です。',wrong:r.who==='bike'?'台本にないベルです。':'学ラン、キャスト外です。',miss:'……ズレてますね。'}[k]});
-  L.push({rel:-0.05,w:'監督',s:{great:'……ここだ。',strong:'……少し強い。',fly:'……ああ。',weak:'……今、触れたか？',ambush:'……待つな。',crash:'……'+obj+'か。',wrong:'……誰だ。',miss:'……出会わないのか。'}[k]});
-  L.push({rel:0.75,w:'アシスタント',s:k==='fly'?(r.glance?'……まだ回ってます。':'まだ飛んでます。'):{great:T.caught?'パン、口に戻りました。':'お二人とも座り込みました。',strong:'パン、拾ってきます。',weak:'パン、口にあります。',ambush:'……気まずいです。',crash:obj+'、揺れてます。',wrong:r.who==='bike'?'卵、確認してきます。':'パンが2枚に。',miss:'何も起きてません。'}[k]});
+  L.push({rel:-0.75,w:'助監督',s:{great:'時速'+kmh+'km。想定どおり。',strong:'時速'+kmh+'km。やや速い。',fly:'時速'+kmh+'km。記録的です。',weak:'時速'+kmh+'km。散歩です。',ambush:'主演、停止中です。',crash:cv.fore,wrong:r.who==='bike'?'台本にないベルです。':'学ラン、キャスト外です。',miss:'……ズレてますね。'}[k]});
+  L.push({rel:-0.05,w:'監督',s:{great:'……ここだ。',strong:'……少し強い。',fly:'……ああ。',weak:'……今、触れたか？',ambush:'……待つな。',crash:cv.hit,wrong:'……誰だ。',miss:'……出会わないのか。'}[k]});
+  L.push({rel:0.75,w:'アシスタント',s:k==='fly'?(r.star?'……星になってます。':r.glance?'……まだ回ってます。':'まだ飛んでます。'):{great:T.caught?'パン、口に戻りました。':'お二人とも座り込みました。',strong:'パン、拾ってきます。',weak:'パン、口にあります。',ambush:'……気まずいです。',crash:cv.wob,wrong:r.who==='bike'?'卵、確認してきます。':'パンが2枚に。',miss:'何も起きてません。'}[k]});
   const J=judgeAll(r),ang=Math.round(r.ang||0);
-  L.push({end:true,delay:0,w:'監督',s:k==='fly'?'カット。代役は、いるか？':k==='crash'?'カット。'+obj+'に罪はない。':k==='wrong'?'カット。彼にも物語がある。':k==='miss'?'カット。曇りにしよう。':J[0].s>=9?'カット。オープニングに使う。':'カット。朝からやろう。'});
-  L.push({end:true,delay:0.8,w:'助監督',s:k==='great'?'テイク1、OKです。':['strong','fly','weak'].includes(k)?'角度'+ang+'度、記録しました。':k==='crash'?obj+'、無傷です。':k==='wrong'?'代役、相談します。':'テイク2、準備します。'});
+  L.push({end:true,delay:0,w:'監督',s:k==='fly'?(r.star?'カット。星は、戻せない。':'カット。代役は、いるか？'):k==='crash'?cv.cut:k==='wrong'?'カット。彼にも物語がある。':k==='miss'?'カット。曇りにしよう。':J[0].s>=9?'カット。オープニングに使う。':'カット。朝からやろう。'});
+  L.push({end:true,delay:0.8,w:'助監督',s:k==='great'?'テイク1、OKです。':['strong','fly','weak'].includes(k)?'角度'+ang+'度、記録しました。':k==='crash'?cv.rec:k==='wrong'?'代役、相談します。':'テイク2、準備します。'});
   const avoided=r.decoy&&['great','strong','weak'].includes(k);
-  L.push({end:true,delay:1.6,w:'アシスタント',s:avoided?(r.decoy==='bike'?'自転車の方に、お礼を……':'男子にも、パンを……'):{great:'パンさん、お疲れさまでした……',strong:'パンは、スタッフで……',fly:'新しいパン、持っていきます……',weak:'パン、まだ温かいです……',ambush:'パン、冷めました……',crash:obj+'さん、お疲れさまでした……',wrong:'パン、もう1枚焼きます……',miss:'……パン、冷めますね。'}[k]});
+  L.push({end:true,delay:1.6,w:'アシスタント',s:avoided?(r.decoy==='bike'?'自転車の方に、お礼を……':'男子にも、パンを……'):{great:'パンさん、お疲れさまでした……',strong:'パンは、スタッフで……',fly:r.star?'星、撮影できます……':'新しいパン、持っていきます……',weak:'パン、まだ温かいです……',ambush:'パン、冷めました……',crash:cv.bye,wrong:'パン、もう1枚焼きます……',miss:'……パン、冷めますね。'}[k]});
   return L;
 }
 const SBI={'監督':0,'助監督':1,'アシスタント':2};
