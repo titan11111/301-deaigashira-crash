@@ -136,7 +136,7 @@ body.replaying .hud{opacity:0}
 #spdind{position:absolute;left:18px;top:14px;font-family:"M PLUS Rounded 1c",monospace;font-weight:800;font-size:12px;letter-spacing:.18em;color:#fff;background:rgba(0,0,0,.45);padding:4px 8px;border-radius:3px;white-space:pre}
 #scr .br{position:absolute;width:22px;height:22px;border:2px solid rgba(255,255,255,.6)}
 #scr .br.a{right:16px;top:12px;border-left:0;border-bottom:0}#scr .br.b{left:16px;bottom:12px;border-right:0;border-top:0}#scr .br.c{right:16px;bottom:12px;border-left:0;border-top:0}
-.sb{position:absolute;bottom:calc(100% - 4px);z-index:2;left:6px;right:6px;background:#e9e1cd;color:#1e1a14;font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:500;font-size:clamp(13px,3.6vw,17px);line-height:1.55;letter-spacing:.06em;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;min-height:2.6em}
+.sb{position:absolute;bottom:calc(100% - 4px);z-index:2;left:4px;right:4px;background:#f4efe0;color:#14120e;font-family:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;font-weight:600;font-size:clamp(12px,3.1vw,15px);line-height:1.48;letter-spacing:.03em;padding:9px 10px;box-shadow:0 6px 18px rgba(0,0,0,.4);opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;white-space:pre-line;text-align:center;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:3.1em;word-break:break-word}
 .sb.show{opacity:1;transform:none}
 .sb::after{content:"";position:absolute;left:50%;bottom:-10px;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#e9e1cd}
 #cine{display:none;position:fixed;inset:0;z-index:9;pointer-events:none;overflow:hidden}
@@ -183,7 +183,7 @@ body.judging #slate{display:block}
 .sl-row b{color:#fff;font-size:14px;letter-spacing:.06em}
 .sl-cast{font-size:12px;color:#b9b6ad;margin-top:6px;letter-spacing:.1em}
 .sl-title{font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-size:23px;margin-top:6px;line-height:1.2}
-.sl-sub{font-size:13px;line-height:1.5;color:#d8d5cc;margin-top:4px}
+.sl-sub{font-size:13px;line-height:1.45;color:#d8d5cc;margin-top:4px;white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-height:2.95em}
 .sl-score{display:flex;align-items:baseline;gap:4px;margin-top:4px;font-weight:800}
 .sl-score b{font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-size:36px}
 .sl-rank{margin-left:auto;font-family:"Dela Gothic One","Hiragino Sans",sans-serif;font-size:44px;color:#ff4f87;text-shadow:2px 2px 0 #ffd23f;line-height:1}
@@ -455,7 +455,7 @@ function makeStudent(o){
   const starM=M(0xffd23f,{emissive:0xffb800,emissiveIntensity:.7});
   for(let i=0;i<3;i++){const a=i/3*Math.PI*2;const st=new THREE.Mesh(new THREE.OctahedronGeometry(0.045),starM);st.position.set(Math.cos(a)*0.18,0,Math.sin(a)*0.18);stars.add(st);}
   g.scale.setScalar(o.scale);scene.add(g);
-  return {g,inner,up,legs,arms,head,toast,home,stars};
+  return {g,inner,up,legs,arms,head,toast,home,stars,baseScale:o.scale};
 }
 function makeSkyStar(){
   const g=new THREE.Group();
@@ -468,7 +468,7 @@ function makeSkyStar(){
     c.closePath();c.fill();
   });
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
-  sp.scale.set(2.6,2.6,1);g.add(sp);
+  sp.scale.set(1.15,1.15,1);g.add(sp);
   const geo=new THREE.BufferGeometry(),arr=new Float32Array(36);
   for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=.45+i%3*.35;arr[i*3]=Math.cos(a)*r;arr[i*3+1]=(i%2?-.2:.35);arr[i*3+2]=Math.sin(a)*r;}
   geo.setAttribute('position',new THREE.BufferAttribute(arr,3));
@@ -477,7 +477,22 @@ function makeSkyStar(){
 }
 const skyStar=makeSkyStar();
 function attachSkyStar(c){if(skyStar.parent)skyStar.parent.remove(skyStar);c.g.add(skyStar);skyStar.position.set(0,0.9,0);skyStar.visible=false;c.inner.visible=true;}
-function twinkleStar(){if(!skyStar.visible)return;const s=1.45+Math.sin(S.real*9)*0.28;skyStar.scale.setScalar(s);skyStar.rotation.z=S.real*1.8;}
+function twinkleStar(){if(!skyStar.visible)return;const s=0.55+Math.sin(S.real*11)*0.18;skyStar.scale.setScalar(s);skyStar.rotation.z=S.real*2.4;}
+function starFlightLook(){
+  if(!S.res||!S.res.star||!girl.char)return;
+  const g=girl.char.g,base=girl.char.baseScale||girl.scale||1;
+  const pre=S.state==='replay'&&S.rt<REC.eventT;
+  if(pre){S.starOn=false;girl.char.inner.visible=true;skyStar.visible=false;g.scale.setScalar(base);return;}
+  const dist=g.position.distanceTo(S.contact),t=clamp((dist-1.2)/30,0,1),far=t>=0.92||dist>36;
+  if(far){
+    if(!S.starOn){S.starOn=true;bang('きらーん');sfxStar();S.bubble='星になっちゃった…';
+      if(S.state==='after'){girl.vel.x*=0.35;girl.vel.z*=0.35;if(girl.vel.y<0.9)girl.vel.y=0.9;}}
+    girl.char.inner.visible=false;skyStar.visible=true;g.rotation.set(0,0,0);g.scale.setScalar(base);
+  }else{
+    S.starOn=false;girl.char.inner.visible=true;skyStar.visible=false;
+    g.scale.setScalar(Math.max(0.04,base*(1-0.96*t)));
+  }
+}
 function pose(c,ph,amp,sit,lean,lie){
   const lr=Math.sin(ph)*amp;
   c.legs[0].rotation.x=lerp(lr,-1.45,sit);c.legs[1].rotation.x=lerp(-lr,-1.45,sit);
@@ -553,7 +568,7 @@ function riderPose(c,ph){c.legs[0].rotation.x=-1.25+Math.sin(ph)*0.45;c.legs[1].
 function decoyRoot(){return decoy.bike?decoy.bike.g:decoy.char.g;}
 function decoyHead(){return decoy.bike?decoy.bike.rider.head:decoy.char.head;}
 
-function resetChar(o){o.yawSpin=0;o.yawAcc=0;o.yawType=false;o.star=false;o.char.g.rotation.set(0,0,0);o.sit=0;o.vel.set(0,0,0);o.landed=false;o.char.stars.visible=false;if(o.char.inner)o.char.inner.visible=true;pose(o.char,0,0,0,0);}
+function resetChar(o){o.yawSpin=0;o.yawAcc=0;o.yawType=false;o.star=false;o.char.g.rotation.set(0,0,0);o.char.g.scale.setScalar(o.char.baseScale||1);o.sit=0;o.vel.set(0,0,0);o.landed=false;o.char.stars.visible=false;if(o.char.inner)o.char.inner.visible=true;pose(o.char,0,0,0,0);}
 function setupRound(){
   const ty=TYPES[S.day];girl.type=ty;
   if(girl.char){if(skyStar.parent)skyStar.parent.remove(skyStar);scene.remove(girl.char.g);}
@@ -647,7 +662,7 @@ function titleOf(r){
   switch(r.kind){
     case 'great':return['ナイス出会い頭！','お互いケガなし。'+(T.caught?'パンも空中キャッチで無事。':'')];
     case 'strong':return['ちょい強め！','パンが落ちちゃった。もう少しスピードを落とそう。'];
-    case 'fly':return[r.star?'お空の星に！！':r.glance?'横回転で吹っ飛ばし！！':r.dist>15?'場外まで吹っ飛ばし！！':'吹っ飛ばしすぎ！！',r.star?'勢いが強すぎて、相手は空の星になりました。':'飛距離 '+r.dist.toFixed(1)+'m。相手の体格に合わせてスピードを調整して。'];
+    case 'fly':return[r.star?'お空の星に！！':r.glance?'横回転で吹っ飛ばし！！':r.dist>15?'場外まで吹っ飛ばし！！':'吹っ飛ばしすぎ！！',r.star?'くるくる小さくなって星に。戻れない。':r.hitObj?fmtComment('飛びながら'+r.hitObj+'。'+r.dist.toFixed(1)+'m'):fmtComment('飛距離'+r.dist.toFixed(1)+'m。スピードを調整')];
     case 'weak':return['ちょん…','かすった程度。もう少し勢いがほしい。'];
     case 'ambush':return['待ち伏せは反則！','止まって待つのはナシ。走りながらタイミングを合わせよう。'];
     case 'miss':return['すれ違い…','タイミングがズレた。カーブミラーで相手を確認しよう。'];
@@ -656,17 +671,28 @@ function titleOf(r){
   }
 }
 function turns(){return (Math.round((girl.yawAcc||0)/(Math.PI*2)*10)/10).toFixed(1);}
+function fmtComment(s,lineW){
+  if(String(s).includes('\n'))return s.split('\n').slice(0,2).map(x=>fmtComment(x,lineW)).join('\n');
+  let t=String(s||'').replace(/[ \t]+/g,'').trim();if(!t)return '';
+  const w=lineW||14,max=w*2;
+  if(t.length>max)t=t.slice(0,max-1)+'…';
+  if(t.length<=w)return t;
+  let br=-1;
+  for(let i=Math.min(w+3,t.length-1);i>=Math.max(5,w-5);i--){const c=t[i];if(c==='。'||c==='、'||c==='！'||c==='？'||c==='…'){br=i+1;break;}}
+  if(br>0&&br<=w+3)return t.slice(0,br)+'\n'+t.slice(br);
+  return t.slice(0,w)+'\n'+t.slice(w);
+}
 const MUR={
   '監督':['……回してくれ。','朝の光が、少し硬い。','……静かに。','桜の散り方がいい。','この角には、物語がある。','主演の目が、まだ眠い。','……風を待とう。','パンの角度、悪くない。','遅刻とは、希望だ。','影が、少し長い。','……いい朝だ。','電柱が主張しすぎだ。','青春は、横移動だ。','足音で、芝居がわかる。','カーブミラーも役者だ。','……呼吸を合わせろ。','この道は、三度目だ。','ブロック塀の色がいい。','私は、角を信じている。','……まだだ。'],
   '助監督':['現在、押し5分です。','近隣への挨拶、済んでます。','スタンバイ、OKです。','パン、温度42度です。','本番、回ってます。','道路使用許可、10時までです。','ミラー、角度確認済みです。','主演、心拍やや高めです。','天気、あと30分もちます。','カチンコ、予備あります。','桜、散る量は自然です。','通行人、止めてます。','許可は通学路のみです。','テイク数、記録してます。','昼休憩は12時半です。','音声、良好です。','ストップウォッチ、回してます。','主演の靴ひも、確認済み。','予算、残り3割です。','次の現場、隣の角です。'],
-  'アシスタント':['パン、焼き上がりました。','お茶、置いておきますね。','ジャム派の方もいます。','パンくず、掃除しておきます。','カイロ、配ってきます。','マーガリン、切れそうです。','食パン、6枚切りです。','近所の犬が吠えてます。','トースター、2台あります。','日焼け止め、ありますよ。','パンの耳、取っておきます。','救急箱、スタンバイです。','……いい匂いがします。','花びら、払っておきます。','ばんそうこう、補充しました。','お弁当、唐揚げです。','パン屋さん、追加OKです。','ポストに投函してきました。','近所の方が見学中です。','……パン、足りるかな。']
+  'アシスタント':['パン、焼き上がりました。','お茶、置いておきますね。','ジャム派の方もいます。','パンくず、掃除しておきます。','カイロ、配ってきます。','マーガリン、切れそうです。','食パン、6枚切りです。','近所の犬が吠えてます。','トースター、2台あります。','日焼け止め、ありますよ。','パンの耳、取っておきます。','救急箱、スタンバイです。','……いい匂いがします。','花びら、払っておきます。','ばんそうこう、補充しました。','お弁当、唐揚げです。','パン屋さん、追加OKです。','近所の方が見学中です。','……パン、足りるかな。','牛乳、冷蔵庫に入れました。']
 };
 const CRASH={
-  'ポスト':{ad:['ポストは、最初からそこにあります。','投函は、撮影後でお願いします。'],as:['郵便局に、菓子折りを。','中の手紙、確認します。'],wob:'ポスト、傾いてます。',rec:'ポスト、破損なしです。',bye:'中の手紙、無事です……'},
-  '電柱':{ad:['電柱は、動きません。','電柱は、据え付けです。'],as:['電力会社に、菓子折りを。','電線、確認します。'],wob:'電柱、揺れてます。',rec:'電柱、破損なしです。',bye:'電線、無事です……'},
-  '自販機':{ad:['自販機は、歩いてきてません。','自販機は、据え置きです。'],as:['業者さんに、菓子折りを。','缶、出てないか見ます。'],wob:'自販機、缶が鳴ってます。',rec:'自販機、破損なしです。',bye:'中の缶、無事です……'},
-  '標識':{ad:['標識は、据え付けです。','標識は、動きません。'],as:['道路課に、菓子折りを。','標識、曲がってないか見ます。'],wob:'標識、傾いてます。',rec:'標識、破損なしです。',bye:'標識、曲がってないです……'},
-  'カーブミラー':{ad:['ミラーは、映す役です。','ミラーは、据え付けです。'],as:['ミラー、拭いておきます。','ミラー、歪み確認します。'],wob:'ミラー、まだ揺れてます。',rec:'ミラー、破損なしです。',bye:'ミラー、歪んでないです……'}
+  'ポスト':{dir:['……鉄に、恋は生まれない。','出会い頭の相手が、ポストだ。'],ad:['ポストは、最初からそこにあります。','主演が動きました。ポストは動いてません。'],as:['郵便局に、菓子折りを。','中の手紙、確認します。'],fore:'前方、ポストです。',hit:'……ポストか。',wob:'ポスト、傾いてます。',cut:'カット。ポストに罪はない。',rec:'ポスト、破損なしです。',bye:'中の手紙、無事です……'},
+  '電柱':{dir:['……電線が、泣いている。','柱に、芝居を振るな。'],ad:['電柱は、据え付けです。','電柱は、歩いてきません。'],as:['電力会社に、菓子折りを。','電線、確認します。'],fore:'前方、電柱です。',hit:'……電柱か。',wob:'電柱、揺れてます。',cut:'カット。電柱は無実だ。',rec:'電柱、破損なしです。',bye:'電線、無事です……'},
+  '自販機':{dir:['……缶より、人が飛んだ。','自販機に、セリフはない。'],ad:['自販機は、据え置きです。','自販機は、歩いてきません。'],as:['業者さんに、菓子折りを。','缶、出てないか見ます。'],fore:'前方、自販機です。',hit:'……自販機か。',wob:'自販機、缶が鳴ってます。',cut:'カット。自販機は、ただ立っていた。',rec:'自販機、破損なしです。',bye:'中の缶、無事です……'},
+  '標識':{dir:['……標識が、正しかった。','止まれ、と言っていた。'],ad:['標識は、据え付けです。','標識は、動きません。'],as:['道路課に、菓子折りを。','標識、曲がってないか見ます。'],fore:'前方、標識です。',hit:'……標識か。',wob:'標識、傾いてます。',cut:'カット。標識の指示は正しかった。',rec:'標識、破損なしです。',bye:'標識、曲がってないです……'},
+  'カーブミラー':{dir:['……映っていたのに、見なかった。','ミラーは、嘘をつかない。'],ad:['ミラーは、据え付けです。','ミラーは、映すだけです。'],as:['ミラー、拭いておきます。','ミラー、歪み確認します。'],fore:'前方、カーブミラーです。',hit:'……ミラーか。',wob:'ミラー、まだ揺れてます。',cut:'カット。ミラーは、映していた。',rec:'ミラー、破損なしです。',bye:'ミラー、歪んでないです……'}
 };
 function crashOf(obj){
   const d=CRASH[obj]||{};
@@ -688,19 +714,19 @@ function judgeAll(r){
   let d1,d2,d3;
   switch(r.kind){
     case 'great':{const s=clamp(Math.round(7+r.angS/35*2+r.posS/25),7,10);
-      d1=[s,s>=9?pick(['……完璧だ。今日は帰っていい。','この角を、20年探していた。','朝が、今完成した。']):pick(['悪くない。迷いが少し映った。','惜しい。出会い頭は、角だ。'])];break;}
-    case 'strong':d1=[5,pick(['強い。余白が足りない。','パンが落ちた。朝が終わった。'])];break;
-    case 'fly':d1=[r.star?0:r.dist>15?1:3,r.star?'……星だ。夜まで待て。':r.glance?'美しい。だがフィギュアではない。':r.dist>15?'いつからアクション映画に？':'私のフレームから出ていった。'];break;
-    case 'weak':d1=[3,pick(['今のは、濃いめのすれ違いだ。','私も気づかなかった。'])];break;
-    case 'ambush':d1=[1,'待った瞬間、出会いではない。'];break;
-    case 'miss':d1=[0,pick(['それも人生だ。映画ではない。','君は今、ただ登校した人だ。'])];break;
+      d1=[s,s>=9?pick(['……完璧だ。','朝が、完成した。','この角、20年探した。']):pick(['悪くない。','惜しい。角だ。'])];break;}
+    case 'strong':d1=[5,pick(['強い。余白がない。','パンが落ちた。'])];break;
+    case 'fly':d1=[r.star?0:r.dist>15?1:3,r.star?pick(['……星だ。待て。','青春が、消えた。']):r.glance?pick(['美しい回転。','横軸が主役。']):r.dist>15?'アクション映画？':'フレームから出た。'];break;
+    case 'weak':d1=[3,pick(['濃いすれ違い。','気づかなかった。'])];break;
+    case 'ambush':d1=[1,'待ちは、出会いじゃない。'];break;
+    case 'miss':d1=[0,pick(['それも人生。','登校しただけだ。'])];break;
     case 'crash':d1=[1,pick(cv.dir)];break;
     default:d1=[1,r.who==='bike'?'自転車とは、物語は始まらない。':'エキストラと出会うな。'];
   }
   if(['great','strong','fly','weak'].includes(r.kind)){
-    const c={great:pick(['角度'+ang+'度。2分、回しました。','OKテイク、押さえました。']),strong:'やや強め。保険の範囲内です。',
-      fly:r.star?'高度、許可エリア外です。':r.glance?tn+'回転。予算外です。':r.dist>15?dist+'m。許可エリア外です。':'台本に「飛ぶ」はありません。',
-      weak:'衝撃'+kb+'。会釈の数値です。'}[r.kind];
+    const c={great:pick(['角度'+ang+'°。OK。','2分、回しました。']),strong:'やや強め。保険内。',
+      fly:r.star?pick(['空域、未申請。','画面から消えた。']):r.hitObj?tn+'回。'+r.hitObj:r.glance?tn+'回転。予算外。':r.dist>15?dist+'m。エリア外。':'台本に飛ぶ、なし。',
+      weak:'衝撃'+kb+'。会釈。'}[r.kind];
     d2=[clamp(Math.round(10*(r.angS/35*0.5+r.pow/40*0.5)),0,10),c];
   }else if(r.kind==='ambush')d2=[1,'書類上は「待ち合わせ」です。'];
   else if(r.kind==='miss')d2=[2,'15分、押します。'];
@@ -709,7 +735,7 @@ function judgeAll(r){
   switch(r.kind){
     case 'great':d3=T.caught?[10,'パン、口に戻りました。']:[8,'お二人とも、ケガなしです。'];break;
     case 'strong':d3=[6,'予備のパン、あと'+left+'枚です。'];break;
-    case 'fly':d3=[1,r.star?'望遠鏡、あります。':r.glance?'冷たいお茶、用意しました。':'救護班、向かってます。'];break;
+    case 'fly':d3=[1,r.star?pick(['望遠鏡、2台。','きらん、しました。']):r.hitObj?r.hitObj+'に当たった。':r.glance?'お茶、用意。':'救護班、向かう。'];break;
     case 'weak':d3=[5,'歯形、きれいに残ってます。'];break;
     case 'ambush':d3=[3,'パン、冷めちゃいました。'];break;
     case 'miss':d3=[4,'レンジは機材車にあります。'];break;
@@ -717,7 +743,7 @@ function judgeAll(r){
     default:d3=r.who==='bike'?[2,'卵、9個は無事でした。']:[3,'パンが2枚に。経費で落とします。'];
   }
   if(r.decoy&&['great','strong','weak'].includes(r.kind))d3=[Math.min(10,d3[0]+1),d3[1]];
-  r._J=[{e:'🎬',n:'監督',s:d1[0],c:d1[1]},{e:'📋',n:'助監督',s:d2[0],c:d2[1]},{e:'🎧',n:'アシスタント',s:d3[0],c:d3[1]}];
+  r._J=[{e:'🎬',n:'監督',s:d1[0],c:fmtComment(d1[1])},{e:'📋',n:'助監督',s:d2[0],c:fmtComment(d2[1])},{e:'🎧',n:'アシスタント',s:d3[0],c:fmtComment(d3[1])}];
   return r._J;
 }
 function meter(label,val,max,txt){return '<div class="m"><div class="row"><span>'+label+'</span><span>'+txt+'</span></div><div class="track"><i style="width:'+Math.round(clamp(val/max,0,1)*100)+'%"></i></div></div>';}
@@ -736,7 +762,7 @@ function showJudges(){S.state='result';const r=S.res,ty=girl.type,J=judgeAll(r),
   $('slate').innerHTML='<div class="clap"></div><div class="clap2"></div><div class="sl-body">'+
     '<div class="sl-row"><span>SCENE</span><b>DAY '+(S.day+1)+'　'+ty.day+'</b><span>TAKE</span><b>1</b></div>'+
     '<div class="sl-cast">共演：'+ty.name+'</div>'+
-    '<div class="sl-title">'+tt[0]+'</div><div class="sl-sub">'+tt[1]+'</div>'+
+    '<div class="sl-title">'+tt[0]+'</div><div class="sl-sub">'+fmtComment(tt[1],18)+'</div>'+
     '<div class="sl-score"><b>'+final+'</b>点<span class="sl-rank">'+rankOf(final)+'</span></div>'+meters+'</div>';
   const sl=$('slate');sl.classList.remove('in');void sl.offsetWidth;sl.classList.add('in');
   noise(0.05,0.5,0.62,4000);tone(1800,0.05,'square',0.06,0.62);
@@ -816,12 +842,13 @@ function impact(dx,dz){
   const score=kind==='fly'?Math.min(20,(angS+posS)*0.3):kind==='ambush'?posS*0.4:pow+angS+posS;
   const star=kind==='fly'&&kb>=8;
   girl.fly=kind==='fly';girl.landed=false;girl.star=star;
-  if(girl.fly){girl.vel.copy(n).multiplyScalar(star?kb*0.85:kb*2.5).add(vP.clone().multiplyScalar(star?0.12:0.35));girl.vel.y=star?12+kb*0.5:5+kb*0.9;}
+  if(girl.fly){girl.vel.copy(n).multiplyScalar(star?12+kb*1.4:kb*2.5).add(vP.clone().multiplyScalar(star?1.05:0.35));girl.vel.y=star?7.2+kb*0.28:5+kb*0.9;}
   else{girl.vel.copy(n).multiplyScalar(kb*0.55).add(vG.clone().multiplyScalar(0.12));girl.vel.y=1.4;}
   girl.spin.set(rand(-10,10),rand(-5,5),rand(-10,10));
   const cy=n.z*vP.x-n.x*vP.z,sg=cy>=0?1:-1,glance=kind!=='ambush'&&kind!=='weak'&&Math.abs(ang-90)>22;
   girl.yawType=glance;girl.yawAcc=0;girl.yawSpin=0;
-  if(glance){if(girl.fly){girl.spin.set(rand(-1.2,1.2),0,rand(-1.2,1.2));girl.yawSpin=sg*(11+kb*1.5);}else girl.yawSpin=sg*(5+kb*1.4);}
+  if(star){girl.spin.set(sg*32,38,sg*28);girl.yawSpin=sg*44;girl.yawType=true;}
+  else if(glance){if(girl.fly){girl.spin.set(rand(-1.2,1.2),0,rand(-1.2,1.2));girl.yawSpin=sg*(11+kb*1.5);}else girl.yawSpin=sg*(5+kb*1.4);}
   player.vel.copy(n).multiplyScalar(-(mG/(mP+mG))*(pn*0.9+1)).add(vP.clone().multiplyScalar(0.15));player.vel.y=1.3;
   if(kind==='ambush')player.vel.multiplyScalar(0.6);
   if(kind!=='weak'&&kind!=='ambush'){
@@ -831,7 +858,7 @@ function impact(dx,dz){
   }
   S.bubble={great:'いたた…ごめんね！',strong:'あっ、パンが…！',fly:'きゃ〜〜っ!?',weak:'…ん？',ambush:'なんで止まってたの！？'}[kind];
   S.impact=true;S.b2=null;
-  beginEvent({kind,score:Math.round(score),kb,ang,d,pow,angS,posS,kmh:Math.round(player.speed*3.6),dist:0,hitObj:null,glance,decoy:decoy.active?decoy.who:null,star},contact,star?5.2:girl.fly?3.4:2.7);
+  beginEvent({kind,score:Math.round(score),kb,ang,d,pow,angS,posS,kmh:Math.round(player.speed*3.6),dist:0,hitObj:null,glance,decoy:decoy.active?decoy.who:null,star},contact,star?8.4:girl.fly?3.4:2.7);
   bang(kind==='fly'?'ドカーン!!':kind==='weak'||kind==='ambush'?'ぽすっ':'ドンッ!!');
   if(kind!=='weak'&&kind!=='ambush')flash();
   S.shake=kind==='fly'?0.5:kind==='strong'?0.3:0.18;sfxImpact(kind);
@@ -865,22 +892,18 @@ function envCollide(o,prev,rad,hs){
 }
 function physChar(o,dt,fly,rad){
   const prev=o.pos.clone();
-  o.pos.addScaledVector(o.vel,dt);o.vel.y-=(o.star?5.2:16)*dt;
+  o.pos.addScaledVector(o.vel,dt);o.vel.y-=(o.star?3.6:16)*dt;
   if(!o.star){if(o.pos.y<=0){o.pos.y=0;if(o.vel.y<-3.5){o.vel.y*=fly?-0.38:-0.28;if(fly)noise(0.12,0.25,0,500);}else o.vel.y=0;}}
   else if(o.pos.y<0.2)o.pos.y=0.2;
   const hs=Math.hypot(o.vel.x,o.vel.z);
   if(!o.star&&o.pos.y===0){const f=Math.exp(-(fly?1.3:5)*dt);o.vel.x*=f;o.vel.z*=f;}
-  if(o.star&&S.starOn){o.vel.x*=Math.exp(-1.5*dt);o.vel.z*=Math.exp(-1.5*dt);if(o.vel.y<0.2)o.vel.y=0.28;}
-  const hit=(o.star&&o.pos.y>4)?null:envCollide(o,prev,rad,hs);
+  if(o.star&&S.starOn){o.vel.x*=Math.exp(-0.55*dt);o.vel.z*=Math.exp(-0.55*dt);if(o.vel.y<0.5)o.vel.y=0.55;}
+  const hit=o.star?null:envCollide(o,prev,rad,hs);
   if(hit&&o===girl&&fly&&S.res&&!S.res.hitObj){S.res.hitObj=hit;S.bubble='め、目が回る〜';}
   const g=o.char.g;
-  if(o.star&&o===girl&&!S.starOn&&o.pos.y>=9.2){
-    S.starOn=true;o.char.inner.visible=false;skyStar.visible=true;
-    bang('きらーん');sfxStar();S.bubble='星になっちゃった…';
-    o.vel.set(o.vel.x*0.15,0.4,o.vel.z*0.15);g.rotation.set(0,g.rotation.y,0);
-  }
   if(o.star){
-    if(!S.starOn){g.rotation.x+=o.spin.x*dt;g.rotation.z+=o.spin.z*dt;g.rotation.y+=o.spin.y*dt;}
+    g.rotation.x+=o.spin.x*dt;g.rotation.y+=o.spin.y*dt;g.rotation.z+=o.spin.z*dt;
+    if(o.yawSpin){g.rotation.y+=o.yawSpin*dt;o.yawAcc+=Math.abs(o.yawSpin*dt);}
     pose(o.char,o.phase,0,0,0,true);g.position.copy(o.pos);return;
   }
   if(fly&&!o.landed&&o.pos.y>0.05){g.rotation.x+=o.spin.x*dt;g.rotation.z+=o.spin.z*dt;g.rotation.y+=o.spin.y*dt;}
@@ -934,7 +957,8 @@ function updateReplay(rdt){
   let pos,look;
   if(shot===0){look=P.clone().lerp(sub,0.5);look.y=0.9;pos=c.clone().add(V(-2.8,4.4,3.0));}
   else if(shot===1){const a=Math.PI*0.75+rel*0.55;pos=fixCam(V(c.x+Math.cos(a)*3.3,0.85,c.z+Math.sin(a)*3.3));look=V(c.x,0.8,c.z);}
-  else{look=sub.clone();look.y=(S.res.star&&sub.y>1)?sub.y:0.7;const far=S.res.kind==='fly';const a=Math.PI*0.75+rel*0.25;pos=fixCam(V(look.x+Math.cos(a)*(far?6:4.8),S.res.star?Math.max(4.2,sub.y-2):far?3.2:2.2,look.z+Math.sin(a)*(far?6:4.8)));}
+  else if(S.res.star){look=sub.clone();look.y=Math.max(1.4,sub.y);pos=V(c.x+Math.cos(Math.PI*0.75)*8.2,4.4,c.z+Math.sin(Math.PI*0.75)*8.2);}
+  else{look=sub.clone();look.y=0.7;const far=S.res.kind==='fly';const a=Math.PI*0.75+rel*0.25;pos=fixCam(V(look.x+Math.cos(a)*(far?6:4.8),far?3.2:2.2,look.z+Math.sin(a)*(far?6:4.8)));}
   if(shot!==S.shot){S.shot=shot;camPos.copy(pos);camLook.copy(look);}
   else{const k=1-Math.exp(-6*rdt);camPos.lerp(pos,k);camLook.lerp(look,k);}
   camera.position.copy(camPos);camera.lookAt(camLook);
@@ -957,8 +981,9 @@ function afterCenter(){if(S.res&&S.res.kind==='fly')return girl.char.g.position;
 function updateCamera(rdt){
   let rate=8;
   if(S.state==='title'){S.orbit+=rdt*0.12;tgtPos.set(Math.cos(S.orbit)*15,6.5,Math.sin(S.orbit)*15);tgtLook.set(0,1.2,0);rate=2;}
-  else if(S.impact&&(S.state==='after'||S.state==='result'||S.state==='final')){S.camAng+=rdt*0.3;const c=afterCenter(),star=S.res&&S.res.star,far=S.res.kind==='fly';
-    tgtPos.set(c.x+Math.cos(S.camAng)*(star?9:far?7.5:5.5),star?Math.max(4.8,c.y-1.8):far?3.6:2.7,c.z+Math.sin(S.camAng)*(star?9:far?7.5:5.5));tgtLook.set(c.x,star?c.y:0.7,c.z);rate=star?3:far?4:3;}
+  else if(S.impact&&(S.state==='after'||S.state==='result'||S.state==='final')){S.camAng+=rdt*0.22;const c=afterCenter(),star=S.res&&S.res.star,far=S.res.kind==='fly';
+    if(star){tgtPos.set(S.contact.x+Math.cos(S.camAng)*8.2,4.4,S.contact.z+Math.sin(S.camAng)*8.2);tgtLook.set(c.x,Math.max(1.6,c.y),c.z);rate=2.2;}
+    else{tgtPos.set(c.x+Math.cos(S.camAng)*(far?7.5:5.5),far?3.6:2.7,c.z+Math.sin(S.camAng)*(far?7.5:5.5));tgtLook.set(c.x,0.7,c.z);rate=far?4:3;}}
   else{const p=player.pos;S.camYaw=lerp(S.camYaw,player.yaw,1-Math.exp(-4*rdt));const cy=S.camYaw;
     tgtPos.set(p.x-Math.sin(cy)*5.2,2.5,p.z-Math.cos(cy)*5.2);if(!inRoad(tgtPos.x,tgtPos.z,3.0))tgtPos.x=clamp(tgtPos.x,-3,3);
     tgtLook.set(p.x+Math.sin(cy)*6,1.2,p.z+Math.cos(cy)*6);if(S.state==='intro')rate=20;}
@@ -1020,6 +1045,7 @@ function frame(now){
   if(S.state==='play'||S.state==='after'||S.state==='intro'){
     mirrorFace.visible=false;renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);mirrorFace.visible=true;
   }
+  starFlightLook();
   twinkleStar();
   renderer.render(scene,camera);
 }
@@ -1109,21 +1135,18 @@ $('cskip').addEventListener('click',()=>{if(S.state==='opening'||S.state==='endi
 const AVS={'監督':'🎬','助監督':'📋','アシスタント':'🎧'};
 function buildSay(r){
   const k=r.kind,kmh=r.kmh||Math.round(player.speed*3.6),obj=r.obj||'',cv=crashOf(obj),L=[];
-  L.push({rel:-3.1,w:'監督',s:(r.decoy||k==='wrong')&&Math.random()<0.5?'……台本にない足音だ。':pick(MUR['監督'])});
-  L.push({rel:-2.3,w:'アシスタント',s:pick(MUR['アシスタント'])});
-  L.push({rel:-1.7,w:'助監督',s:pick(MUR['助監督'])});
-  L.push({rel:-0.75,w:'助監督',s:{great:'時速'+kmh+'km。想定どおり。',strong:'時速'+kmh+'km。やや速い。',fly:'時速'+kmh+'km。記録的です。',weak:'時速'+kmh+'km。散歩です。',ambush:'主演、停止中です。',crash:cv.fore,wrong:r.who==='bike'?'台本にないベルです。':'学ラン、キャスト外です。',miss:'……ズレてますね。'}[k]});
-  L.push({rel:-0.05,w:'監督',s:{great:'……ここだ。',strong:'……少し強い。',fly:'……ああ。',weak:'……今、触れたか？',ambush:'……待つな。',crash:cv.hit,wrong:'……誰だ。',miss:'……出会わないのか。'}[k]});
-  L.push({rel:0.75,w:'アシスタント',s:k==='fly'?(r.star?'……星になってます。':r.glance?'……まだ回ってます。':'まだ飛んでます。'):{great:T.caught?'パン、口に戻りました。':'お二人とも座り込みました。',strong:'パン、拾ってきます。',weak:'パン、口にあります。',ambush:'……気まずいです。',crash:cv.wob,wrong:r.who==='bike'?'卵、確認してきます。':'パンが2枚に。',miss:'何も起きてません。'}[k]});
+  L.push({rel:-0.35,w:'助監督',s:{great:'時速'+kmh+'km、想定内',strong:'時速'+kmh+'km、やや速い',fly:r.star?'時速'+kmh+'km、記録更新':kmh+'km、強い',weak:'時速'+kmh+'km、散歩',ambush:'主演、停止中',crash:cv.fore,wrong:r.who==='bike'?'台本外のベル':'キャスト外',miss:'ズレてます'}[k]});
+  L.push({rel:0,w:'監督',s:{great:'……ここだ。',strong:'……強い。',fly:r.star?'……遠ざかる。':r.glance?'……回れ。':'……ああ。',weak:'……触れた？',ambush:'……待つな。',crash:cv.hit,wrong:'……誰だ。',miss:'……出会わない。'}[k]});
+  L.push({rel:0.4,w:'アシスタント',s:k==='fly'?(r.star?'小さくなる。\nきらん、しました。':r.glance?'まだ回ってます。':r.hitObj?r.hitObj+'に当たった。':'まだ飛んでます。'):{great:T.caught?'パン、口へ。':'二人、座り込み。',strong:'パン、拾います。',weak:'パン、口中。',ambush:'気まずい。',crash:cv.wob,wrong:r.who==='bike'?'卵、確認。':'パン2枚。',miss:'何もなし。'}[k]});
   const J=judgeAll(r),ang=Math.round(r.ang||0);
-  L.push({end:true,delay:0,w:'監督',s:k==='fly'?(r.star?'カット。星は、戻せない。':'カット。代役は、いるか？'):k==='crash'?cv.cut:k==='wrong'?'カット。彼にも物語がある。':k==='miss'?'カット。曇りにしよう。':J[0].s>=9?'カット。オープニングに使う。':'カット。朝からやろう。'});
-  L.push({end:true,delay:0.8,w:'助監督',s:k==='great'?'テイク1、OKです。':['strong','fly','weak'].includes(k)?'角度'+ang+'度、記録しました。':k==='crash'?cv.rec:k==='wrong'?'代役、相談します。':'テイク2、準備します。'});
+  L.push({end:true,delay:0,w:'監督',s:k==='fly'?(r.star?'カット。星は戻せない。':'カット。代役は？'):k==='crash'?cv.cut:k==='wrong'?'カット。彼にも物語。':k==='miss'?'カット。曇り。':J[0].s>=9?'カット。OPに使う。':'カット。朝から。'});
+  L.push({end:true,delay:0.8,w:'助監督',s:k==='great'?'テイク1、OK。':k==='fly'&&r.star?'飛行、未申請。':['strong','fly','weak'].includes(k)?'角度'+ang+'°、記録。':k==='crash'?cv.rec:k==='wrong'?'代役、相談。':'テイク2、準備。'});
   const avoided=r.decoy&&['great','strong','weak'].includes(k);
-  L.push({end:true,delay:1.6,w:'アシスタント',s:avoided?(r.decoy==='bike'?'自転車の方に、お礼を……':'男子にも、パンを……'):{great:'パンさん、お疲れさまでした……',strong:'パンは、スタッフで……',fly:r.star?'星、撮影できます……':'新しいパン、持っていきます……',weak:'パン、まだ温かいです……',ambush:'パン、冷めました……',crash:cv.bye,wrong:'パン、もう1枚焼きます……',miss:'……パン、冷めますね。'}[k]});
+  L.push({end:true,delay:1.6,w:'アシスタント',s:avoided?(r.decoy==='bike'?'自転車に、お礼。':'男子にもパン。'):{great:T.caught?'パン、無事。':pick(['ケガなし。','パン、温かい。']),strong:'パンはスタッフ用',fly:r.star?'星、撮れます。':'パン、持参。',weak:'パン、温かい。',ambush:'パン、冷めた。',crash:cv.bye,wrong:'パン、追加焼き。',miss:'パン、冷める。'}[k]});
   return L;
 }
 const SBI={'監督':0,'助監督':1,'アシスタント':2};
-function sayShow(it){S.sb[it.w]={s:it.s,t:0};const b=$('sb'+SBI[it.w]);b.textContent='';b.classList.add('show');}
+function sayShow(it){const t=fmtComment(it.s);S.sb[it.w]={s:t,t:0};const b=$('sb'+SBI[it.w]);b.textContent='';b.classList.add('show');}
 function sayTick(rdt){for(const w in S.sb){const o=S.sb[w];o.t+=rdt;const n=Math.max(0,Math.min(o.s.length,Math.floor(o.t*20))),el=$('sb'+SBI[w]);el.textContent=o.s.slice(0,n);el.classList.toggle('show',n>0);}}
 
 toTitle();
